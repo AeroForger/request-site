@@ -20,7 +20,7 @@ HEADERS = [
     ("Permissions-Policy", "camera=(), microphone=(), geolocation=()"),
     (
         "Content-Security-Policy",
-        "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self' https://request-site-tan.vercel.app; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
+        "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self' https://request-site-6jmpix9dl-aero-forger.vercel.app; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
     ),
 ]
 
@@ -70,9 +70,16 @@ def application(environ, start_response):
         origin = environ.get("HTTP_ORIGIN")
         allowed = os.environ.get(
             "SITE_ORIGIN",
-            "https://aeroforger.github.io" if os.environ.get("VERCEL") else "http://localhost:3000",
+            "https://request-site-6jmpix9dl-aero-forger.vercel.app"
+            if os.environ.get("VERCEL")
+            else "http://localhost:3000",
         ).rstrip("/")
-        allowed_origins = {allowed, "https://request-site-tan.vercel.app"}
+        allowed_origins = {
+            allowed,
+            "https://request-site-6jmpix9dl-aero-forger.vercel.app",
+            "https://request-site-tan.vercel.app",
+            "https://request-site-aero-forger.vercel.app",
+        }
         original_start_response = start_response
 
         def start_response(status, headers):

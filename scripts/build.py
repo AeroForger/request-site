@@ -13,7 +13,7 @@ parser.add_argument("--pages", action="store_true")
 args = parser.parse_args()
 endpoint = os.environ.get("PUBLIC_REQUEST_API_URL", "").strip()
 if args.pages and not endpoint:
-    endpoint = "https://request-site-tan.vercel.app/api/requests"
+    endpoint = "https://request-site-6jmpix9dl-aero-forger.vercel.app/api/requests"
 if endpoint:
     url = urlsplit(endpoint)
     if (

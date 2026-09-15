@@ -73,7 +73,7 @@ For formatting: `ruff format .` and `python scripts/format_frontend.py`. The bui
 
 Frontend: https://aeroforger.github.io/request-site/
 
-API: https://request-site-tan.vercel.app/api/requests
+API: https://request-site-6jmpix9dl-aero-forger.vercel.app/api/requests
 
 Assets use relative URLs so fonts, styles, icons, and modules resolve under `/request-site/`. Canonical and Open Graph URLs point to the Pages site. `public/config.js` uses Vercel for the Pages frontend and the local `/api/requests` route elsewhere.
 
