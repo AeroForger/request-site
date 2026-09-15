@@ -1,0 +1,3 @@
+ruff==0.12.12
+jsbeautifier==2.0.3
+cssbeautifier==2.0.3

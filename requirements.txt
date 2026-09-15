@@ -1,0 +1,2 @@
+# Only required for production hosting; local development uses the standard library.
+gunicorn==23.0.0
