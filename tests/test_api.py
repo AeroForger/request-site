@@ -36,7 +36,8 @@ class ApiTests(unittest.TestCase):
             result["status"] = int(status.split()[0])
             result["headers"] = dict(headers)
 
-        result["body"] = json.loads(b"".join(app.application(env, start)))
+        raw = b"".join(app.application(env, start))
+        result["body"] = json.loads(raw) if raw else None
         return result
 
     @patch("server.app.send_request")
@@ -116,6 +117,47 @@ class ApiTests(unittest.TestCase):
             self.assertFalse(limiter.allow("b"))
         with patch("server.app.time.monotonic", return_value=12):
             self.assertTrue(limiter.allow("b"))
+
+    @patch.dict("os.environ", {"SITE_ORIGIN": "https://aeroforger.github.io"})
+    @patch("server.app.send_request")
+    def test_pages_preflight_and_submission(self, mail):
+        origin = "https://aeroforger.github.io"
+        preflight = self.request(
+            method="OPTIONS",
+            HTTP_ORIGIN=origin,
+            HTTP_ACCESS_CONTROL_REQUEST_METHOD="POST",
+            HTTP_ACCESS_CONTROL_REQUEST_HEADERS="content-type",
+        )
+        self.assertEqual(preflight["status"], 204)
+        self.assertEqual(preflight["headers"]["Access-Control-Allow-Origin"], origin)
+        mail.assert_not_called()
+        result = self.request(HTTP_ORIGIN=origin, HTTP_SEC_FETCH_SITE="cross-site")
+        self.assertEqual(result["status"], 201)
+        self.assertEqual(result["headers"]["Access-Control-Allow-Origin"], origin)
+        self.assertEqual(result["headers"]["Vary"], "Origin")
+        mail.assert_called_once()
+
+    @patch.dict("os.environ", {"SITE_ORIGIN": "https://aeroforger.github.io"})
+    @patch("server.app.send_request")
+    def test_untrusted_preflight_and_post(self, mail):
+        for method in ["OPTIONS", "POST"]:
+            result = self.request(
+                method=method,
+                HTTP_ORIGIN="https://evil.example",
+                HTTP_ACCESS_CONTROL_REQUEST_METHOD="POST",
+            )
+            self.assertEqual(result["status"], 403)
+            self.assertNotIn("Access-Control-Allow-Origin", result["headers"])
+        mail.assert_not_called()
+
+    @patch.dict("os.environ", {"SITE_ORIGIN": "https://aeroforger.github.io"})
+    @patch("server.app.send_request", side_effect=MailUnavailable("private"))
+    def test_pages_errors_include_cors(self, mail):
+        result = self.request(HTTP_ORIGIN="https://aeroforger.github.io")
+        self.assertEqual(result["status"], 503)
+        self.assertEqual(
+            result["headers"]["Access-Control-Allow-Origin"], "https://aeroforger.github.io"
+        )
 
     def test_private_files_not_served(self):
         for path in ["/../.env.example", "/server/mail.py", "/.env"]:

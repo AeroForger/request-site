@@ -1,4 +1,7 @@
 import {
+    requestApiUrl
+} from './config.js';
+import {
     projects
 } from './projects.js';
 const drawings = {
@@ -69,10 +72,20 @@ const description = form.elements.description;
 description.addEventListener('input', () => {
     document.querySelector('#character-count').textContent = `${description.value.length.toLocaleString()} / 5,000`;
 });
+const apiConfigured = Boolean(requestApiUrl) && !(location.hostname.endsWith('.github.io') && requestApiUrl.startsWith('/'));
+if (!apiConfigured) {
+    const status = document.querySelector('#form-status');
+    status.textContent = 'Online requests are not available yet. Email your request to ';
+    const emailLink = document.createElement('a');
+    emailLink.href = 'mailto:AeroForgery@proton.me';
+    emailLink.textContent = 'AeroForgery@proton.me';
+    status.append(emailLink);
+    form.querySelector('button[type="submit"]').disabled = true;
+}
 let submitting = false;
 form.addEventListener('submit', async (event) => {
     event.preventDefault();
-    if (submitting || !form.reportValidity()) return;
+    if (!apiConfigured || submitting || !form.reportValidity()) return;
     submitting = true;
     const button = form.querySelector('button[type="submit"]');
     const status = document.querySelector('#form-status');
@@ -82,7 +95,7 @@ form.addEventListener('submit', async (event) => {
     status.textContent = '';
     status.className = '';
     try {
-        const response = await fetch('/api/requests', {
+        const response = await fetch(requestApiUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

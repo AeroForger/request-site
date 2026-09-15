@@ -20,7 +20,7 @@ HEADERS = [
     ("Permissions-Policy", "camera=(), microphone=(), geolocation=()"),
     (
         "Content-Security-Policy",
-        "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
+        "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self' https://request-site-tan.vercel.app; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
     ),
 ]
 
@@ -67,6 +67,45 @@ def application(environ, start_response):
     path = environ.get("PATH_INFO", "/")
     method = environ.get("REQUEST_METHOD", "GET")
     if path == "/api/requests":
+        origin = environ.get("HTTP_ORIGIN")
+        allowed = os.environ.get(
+            "SITE_ORIGIN",
+            "https://aeroforger.github.io" if os.environ.get("VERCEL") else "http://localhost:3000",
+        ).rstrip("/")
+        allowed_origins = {allowed, "https://request-site-tan.vercel.app"}
+        original_start_response = start_response
+
+        def start_response(status, headers):
+            headers = headers + [("Vary", "Origin")]
+            if origin in allowed_origins:
+                headers += [("Access-Control-Allow-Origin", origin)]
+            return original_start_response(status, headers)
+
+        if method == "OPTIONS":
+            requested_headers = {
+                header.strip().lower()
+                for header in environ.get("HTTP_ACCESS_CONTROL_REQUEST_HEADERS", "").split(",")
+                if header.strip()
+            }
+            if (
+                origin not in allowed_origins
+                or environ.get("HTTP_ACCESS_CONTROL_REQUEST_METHOD") != "POST"
+                or requested_headers - {"content-type"}
+            ):
+                return json_response(
+                    start_response, "403 Forbidden", {"error": "Origin or method not allowed."}
+                )
+            start_response(
+                "204 No Content",
+                HEADERS
+                + [
+                    ("Access-Control-Allow-Methods", "POST"),
+                    ("Access-Control-Allow-Headers", "Content-Type"),
+                    ("Access-Control-Max-Age", "600"),
+                    ("Content-Length", "0"),
+                ],
+            )
+            return []
 
         def reply(code, error, extra=None):
             return json_response(start_response, code, {"error": error}, extra)
@@ -81,9 +120,9 @@ def application(environ, start_response):
                 "Too many attempts. Please try again in 15 minutes.",
                 [("Retry-After", "900")],
             )
-        origin = environ.get("HTTP_ORIGIN")
-        allowed = os.environ.get("SITE_ORIGIN", "http://localhost:3000").rstrip("/")
-        if (origin and origin != allowed) or environ.get("HTTP_SEC_FETCH_SITE") == "cross-site":
+        if (origin and origin not in allowed_origins) or (
+            not origin and environ.get("HTTP_SEC_FETCH_SITE") == "cross-site"
+        ):
             return reply("403 Forbidden", "Requests must be submitted from this website.")
         if environ.get("CONTENT_TYPE", "").split(";")[0].strip().lower() != "application/json":
             return reply("415 Unsupported Media Type", "Send a JSON request.")

@@ -1,13 +1,13 @@
 @font-face {
     font-family: 'Adwaita Sans';
-    src: url('/fonts/adwaita-sans.woff2') format('woff2');
+    src: url('./fonts/adwaita-sans.woff2') format('woff2');
     font-weight: 100 900;
     font-display: swap
 }
 
 @font-face {
     font-family: 'Adwaita Mono';
-    src: url('/fonts/adwaita-mono.woff2') format('woff2');
+    src: url('./fonts/adwaita-mono.woff2') format('woff2');
     font-weight: 400;
     font-display: swap
 }

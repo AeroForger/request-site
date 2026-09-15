@@ -26,10 +26,10 @@ pip install -r requirements.txt -r requirements-dev.txt
 1. Create a Resend API key with sending permission and verify your sender domain.
 2. Set `RESEND_API_KEY` in `.env` or your host's secret environment settings.
 3. Set `MAIL_FROM` to an address on that verified domain, e.g. `AeroForger <requests@your-domain.com>`.
-4. Set `REQUEST_TO=AeroForgery@proton.me` server-side.
+4. Set `REQUEST_TO=aeroforgery@proton.me` server-side.
 5. Set `SITE_ORIGIN` to the exact public origin, e.g. `https://your-domain.com` (no trailing slash).
 
-The mail adapter is `server/mail.py`, using the [Resend send-email API](https://resend.com/docs/api-reference/emails/send-email). Only the configured sender and recipient are used. The visitor email becomes Reply-To. Message bodies are plain text. Credentials and destination addresses are never included in public assets. Never commit `.env`.
+The mail adapter is `server/mail.py`, using the [Resend send-email API](https://resend.com/docs/api-reference/emails/send-email). Only the configured sender and recipient are used. The visitor email becomes Reply-To. Message bodies are plain text. Credentials are never included in public assets. The contact address is intentionally public, while the API recipient is controlled only by the backend. Never commit `.env`.
 
 ## Content
 
@@ -69,7 +69,35 @@ python scripts/build.py
 
 For formatting: `ruff format .` and `python scripts/format_frontend.py`. The build copies self-contained frontend assets into `dist/`. Once built, the server serves `dist/`; rebuild after frontend changes, or remove `dist/` to serve `public/` directly.
 
-## Production deployment
+## GitHub Pages frontend and Vercel API
+
+Frontend: https://aeroforger.github.io/request-site/
+
+API: https://request-site-tan.vercel.app/api/requests
+
+Assets use relative URLs so fonts, styles, icons, and modules resolve under `/request-site/`. Canonical and Open Graph URLs point to the Pages site. `public/config.js` uses Vercel for the Pages frontend and the local `/api/requests` route elsewhere.
+
+### Publish the frontend
+
+In the GitHub repository, set Settings > Pages > Source to GitHub Actions. The `.github/workflows/pages.yml` workflow builds and publishes only `dist/` when changes reach `main`, or when run manually. The default production API is already configured. To change it, set the repository variable `PUBLIC_REQUEST_API_URL` to the full HTTPS endpoint. Never put email credentials in that variable.
+
+Build the Pages artifact locally with `python scripts/build.py --pages`.
+
+### Deploy the API
+
+Deploy this repository to the existing `request-site-tan` Vercel project, with the framework preset set to Other. `vercel.json` builds static assets and `api/requests.py` exposes the existing WSGI API as a Python function. This does not require a separate Gunicorn process on Vercel.
+
+Set these in Vercel's production environment, then redeploy:
+
+- `RESEND_API_KEY`: your existing sending key.
+- `MAIL_FROM`: your configured Resend sender.
+- `REQUEST_TO`: `aeroforgery@proton.me` (the lowercase address accepted by Resend).
+- `SITE_ORIGIN`: `https://aeroforger.github.io` (origin only, without `/request-site/`).
+
+The API accepts the configured Pages origin and its own Vercel site origin, returns CORS headers on errors as well as successes, and answers OPTIONS preflight requests. Other browser origins are rejected. Local `.env` values are not uploaded to Vercel; configure the production environment separately. The in-memory limiter is per function instance and resets on cold starts; configure Vercel Firewall rate limiting for an aggregate production limit.
+
+### Other Python hosts
+
 
 Upload this project to a Python host, set the environment variables, install `requirements.txt`, run the build, and start:
 
